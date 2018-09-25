@@ -3,11 +3,14 @@
  * @param {String} word
  * @return {Number}
  */
-const rankAnagram = word => {
+const listPosition = word => {
+  // Base case
+if (word.length <= 1) return 1;
+
   // Create queue of strings to process
   const q = [ word ];
   // Track rank
-  let rank = 0;
+  let rank = 1;
   /**
    * @description process string
    */
@@ -20,19 +23,21 @@ const rankAnagram = word => {
       for (let b = a + 1; b < string.length; b += 1) {
         // If there is a charB less than charA, add substring from after charA where charA is in charB place
         if (string[b] < string[a]) {
-          let subString = string.slice(a);
+          let subString = string.slice(a + 1);
           subString[b - a] = string[a];
           q.push(subString);
           rank += 1;
-          console.log(subString, q);
         }
       }
     }
   };
-  // while (q.length > 0) {
+  while (q.length > 0) {
     process(q.shift());
-  // }
+  }
   return rank;
 };
 
-console.log(rankAnagram('ABAB'));
+console.log(`Expect 'ABAB' to be 2, actual: ${rankAnagram('ABAB')}`);
+console.log(`Expect 'AAAB' to be 1, actual: ${rankAnagram('AAAB')}`);
+console.log(`Expect 'BAAA' to be 4, actual: ${rankAnagram('BAAA')}`);
+console.log(`Expect 'QUESTION' to be 24572, actual: ${rankAnagram('QUESTION')}`);
