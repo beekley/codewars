@@ -1,0 +1,24 @@
+.DS_Store
+*.sw*
+*~
+build/
+dist/
+node_modules/
+vendor/
+webroot/
+tmp/
+temp/
+log/
+/workspace/
+/cache/
+coverage/
+.idea
+.vscode
+*.iml
+api.log
+npm-debug.log
+*.csv
+
+#omit new relic log files
+newrelic.log
+newrelic_agent.log
