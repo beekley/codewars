@@ -17,7 +17,8 @@ const pool = mysql.createPool({
 });
 
 const TABLE = 'sm_assessor_2015';
-const DELAY = 1000;
+const DELAY = 2000;
+const BATCH_SIZE = 5;
 
 /**
  * @description
@@ -25,7 +26,10 @@ const DELAY = 1000;
 const getBatch = limit => new Promise((resolve, reject) => {
   const sql = `
     SELECT AIN FROM ${TABLE}
-    WHERE SqftLot IS NULL
+    WHERE
+      (CHAR_LENGTH(SitusZipCode) < 9 OR SitusZipCode IS NULL OR SqftLot IS NULL)
+      AND GeneralUseType = 'Residential'
+      AND PropertyType != 'CND'
     LIMIT ?;
   `;
   const params = [ limit ];
@@ -52,7 +56,11 @@ const updateParcel = parcel => new Promise((resolve, reject) => {
     UPDATE ${TABLE}
     SET
       ZoningPDB = '${parcel.ZoningPDB}',
-      SqftLot = ${parcel.SqftLot}
+      SqftLot = ${parcel.SqftLot},
+      SitusZipCode = '${parcel.SitusZipCode}',
+      CurrentRoll_LandValue = ${parcel.CurrentRoll_LandValue},
+      CurrentRoll_ImpValue = ${parcel.CurrentRoll_ImpValue},
+      CurrentRoll_BaseYear = ${parcel.CurrentRoll_BaseYear}
     WHERE AIN = ${parcel.AIN};
   `;
   pool.query(sql, (error, result) => error ? reject(error) : resolve(result));
@@ -62,13 +70,11 @@ const updateParcel = parcel => new Promise((resolve, reject) => {
  * @description
  */
 const getAndUpdateParcels = async () => {
-  const parcels = await getBatch(100);
+  const parcels = await getBatch(BATCH_SIZE);
   if (parcels.length === 0) return;
   console.log(`${(new Date()).toISOString()} - Processing batch of ${parcels.length} parcels`);
   await Promise.all(parcels.map(async parcel => {
-    const { ZoningPDB, SqftLot } = await getParcelDetails(parcel.AIN);
-    parcel.ZoningPDB = ZoningPDB;
-    parcel.SqftLot = SqftLot;
+    Object.assign(parcel, await getParcelDetails(parcel.AIN));
   }));
   await Promise.all(parcels.map(async parcel => await updateParcel(parcel)));
   return getAndUpdateParcels();
@@ -83,5 +89,5 @@ setTimeout(async error => {
     console.log('error!', error);
   }
   pool.end();
-  console.log(`${(new Date()).toISOString()} - Done`)
+  console.log(`${(new Date()).toISOString()} - Done`);
 }, 500);
