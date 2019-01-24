@@ -1,58 +1,40 @@
-const fs = require('fs');
+/**
+ * This file is the main function for calculating speaking share of each player in The Adventure Zone
+ */
 
-// Imports the Google Cloud client library
-const speech = require('@google-cloud/speech').v1p1beta1;
-
-// Creates a client
-const client = new speech.SpeechClient();
+const { transcribe } = require('./src/parse_transcript');
+const { promises: fs } = require('fs');
+const inputDir = `./input`;
+// const outputDir = `./output`;
 
 /**
- * TODO(developer): Uncomment the following lines before running the sample.
+ * @description Main function
  */
-const fileName = './clip1.opus';
+const main = async () => {
 
-const config = {
-  languageCode: `en-US`,
-  encoding: `OGG_OPUS`,
-  sampleRateHertz: 24000,
-  enableSpeakerDiarization: true,
-  diarizationSpeakerCount: 4,
-  model: `default`,
-};
+  // Get a list of input files
+  const files = await fs.readdir(inputDir);
 
-const audio = {
-  // content: fs.readFileSync(fileName).toString('base64'),
-  uri: `gs://taz-clips/taz/clip1.opus`,
-};
+  // Iterate through input files and parse them
+  const summaries = await Promise.all(files
+    .map(fileName => `${inputDir}/${fileName}`)
+    .map(transcribe)
+  );
 
-const request = {
-  config: config,
-  audio: audio,
-};
-
-client
-  .longRunningRecognize(request)
-  .then(responses => {
-    const operation = responses[0];
-    const initialApiResponse = responses[1];
-
-    console.log({ operation, initialApiResponse });
-
-    // Operation#promise starts polling for the completion of the LRO.
-    return operation.promise();
-  })
-  .then(responses => {
-    // The final result of the operation.
-    const result = responses[0];
-
-    // The metadata value of the completed operation.
-    const metadata = responses[1];
-
-    // The response of the api call returning the complete operation.
-    const finalApiResponse = responses[2];
-
-    console.log({ result, metadata, finalApiResponse });
-  })
-  .catch(err => {
-    console.error(err);
+  // Convert to rows
+  const rows = [];
+  summaries.forEach(summary => {
+    const episode = summary.file;
+    Object.entries(summary.speakers).forEach(speaker => {
+      const name = speaker[0];
+      const { wordCount, lineCount, characterCount } = speaker[1];
+      rows.push({ episode, name, wordCount, lineCount, characterCount });
+    });
   });
+  console.log(JSON.stringify(rows));
+
+};
+
+main()
+  .then(console.log)
+  .catch(console.error);

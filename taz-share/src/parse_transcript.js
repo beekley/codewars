@@ -3,17 +3,21 @@
  */
 
 const { promises: fs } = require('fs');
-const file = './input/ep2.txt';
-
-// Array of lines of format { speaker: line }
-const transcript = [];
-// Map of speaker -> words spoken, lines spoken
-const speakers = {};
 
 /**
- *
+ * Parses a text transcript and returns a JSON version with summary
+ * @param {String} file - Path to file to read from
+ * @return {Object} { file, transcript, speakers, errors }
  */
 const transcribe = async file => {
+
+  // Array of lines of format { speaker: line }
+  const transcript = [];
+  // Map of speaker -> words spoken, lines spoken
+  const speakers = {};
+  // Errors
+  const errors = [];
+
   // const filehandle = await fs.open(file);
   const fileContents = (await fs.readFile(file)).toString();
 
@@ -29,7 +33,7 @@ const transcribe = async file => {
     .filter(line => {
       const hasSpeakerRegex = /\w+:/;
       const hasSpeaker = line.match(hasSpeakerRegex);
-      if (!hasSpeaker) console.log(`Skipping line that is missing speaker info: ${line}`);
+      if (!hasSpeaker) errors.push(`Skipping line that is missing speaker info: ${line}`);
       return hasSpeaker;
     })
     // Iterate through lines
@@ -53,12 +57,23 @@ const transcribe = async file => {
 
       }
       catch (error) {
-        console.log({ error, line });
+        errors.push({ error, line });
       }
     });
 
+  return { file, transcript, speakers, errors };
+
 };
 
-transcribe(file)
-  .then(res => console.log(speakers))
-  .catch(console.log);
+/**
+ *
+ */
+// const writeSummaryToFile = async () => {
+//   await fs.writeFile(output, JSON.stringify({ speakers, errors })), 'utf8';
+//   console.log(`${file} done!`);
+// };
+
+module.exports = {
+  transcribe,
+  // writeSummaryToFile
+};
